@@ -33,8 +33,8 @@ parser = argparse.ArgumentParser(description="Twitter archive eraser")
 parser.add_argument(
     "--file",
     type=str,
-    default="./tweet.json",
-    help="Input file. Look for the tweet.js file under the archive's data folder.\nRemove the characters until the bracket, then rename the file extension to .json such as tweet.json.",
+    default="./tweet.js",
+    help="Input file. Look for the tweet.js file under the archive's data folder.",
 )
 parser.add_argument(
     "--threads",
@@ -49,6 +49,7 @@ if args.threads > 64:
     args.threads = 64
 
 archive = open(args.file, "rt", encoding="utf-8")
+archive.seek(25)
 tweets = json.loads(archive.read())
 archive.close()
 
