@@ -37,9 +37,5 @@
 
 3. 명령 프롬프트 창을 열고 archive-eraser.exe를 실행시킵니다.
 
-- Runtime Options
-    - --threads: 프로그램을 실행할 쓰레드 수를 정합니다.(최대 64쓰레드)
-    - --file: tweet.js 파일의 위치를 지정합니다.
-
 ## License
 - AGPLv3+
