@@ -1,4 +1,4 @@
-# Twitter Archive Eraser
+# Tweeetswipe
 
 ## 사용법
 
