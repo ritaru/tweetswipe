@@ -34,11 +34,9 @@ tweets = json.loads(archive.read())
 archive.close()
 
 tweet_ids = []
-tweet_mask = ["1471346789538476034", "1471128187300360194"]
 
 for i in range(len(tweets)):
-    if tweets[i]["tweet"]["id_str"] not in tweet_mask:
-        tweet_ids.append(tweets[i]["tweet"]["id_str"])
+    tweet_ids.append(tweets[i]["tweet"]["id_str"])
 
 del archive
 del tweets
