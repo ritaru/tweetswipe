@@ -65,70 +65,70 @@ gc.collect()
 
 if __name__ == "__main__":
 
-  workload = []
-  workload_size = len(tweet_ids) // args.threads
+    workload = []
+    workload_size = len(tweet_ids) // args.threads
 
-  for i in range(args.threads):
-      workload.append(tweet_ids[i * args.threads : (i + 1) * args.threads])
+    for i in range(args.threads):
+        workload.append(tweet_ids[i * workload_size : (i + 1) * workload_size])
 
-  token_request = OAuth1Session(
-      client_key=CLIENT_KEY, client_secret=CLIENT_SECRET, callback_uri="oob"
-  )
-  res = token_request.post("https://api.twitter.com/oauth/request_token")
-  tokens = dict(parse_qsl(res.text))
+    token_request = OAuth1Session(
+        client_key=CLIENT_KEY, client_secret=CLIENT_SECRET, callback_uri="oob"
+    )
+    res = token_request.post("https://api.twitter.com/oauth/request_token")
+    tokens = dict(parse_qsl(res.text))
 
-  os.system(
-      f"start \"\" https://api.twitter.com/oauth/authorize?oauth_token={tokens['oauth_token']}"
-  )
+    os.system(
+        f"start \"\" https://api.twitter.com/oauth/authorize?oauth_token={tokens['oauth_token']}"
+    )
 
-  sys.stdout.write("Enter the PIN code: ")
-  pin_code = str(input())
+    sys.stdout.write("Enter the PIN code: ")
+    pin_code = str(input())
 
-  res = token_request.post(
-      f"https://api.twitter.com/oauth/access_token",
-      params={"oauth_token": tokens["oauth_token"], "oauth_verifier": pin_code},
-  )
+    res = token_request.post(
+        f"https://api.twitter.com/oauth/access_token",
+        params={"oauth_token": tokens["oauth_token"], "oauth_verifier": pin_code},
+    )
 
-  credentials = dict(parse_qsl(res.text))
+    credentials = dict(parse_qsl(res.text))
 
-  account_session = OAuth1Session(
-      client_key=CLIENT_KEY,
-      client_secret=CLIENT_SECRET,
-      resource_owner_key=credentials["oauth_token"],
-      resource_owner_secret=credentials["oauth_token_secret"],
-  )
+    account_session = OAuth1Session(
+        client_key=CLIENT_KEY,
+        client_secret=CLIENT_SECRET,
+        resource_owner_key=credentials["oauth_token"],
+        resource_owner_secret=credentials["oauth_token_secret"],
+    )
 
-  print(f"\nHello {credentials['screen_name']}.")
-  print(
-      f"You have {len(tweet_ids)} tweets. Delete now? (enter y / yes to go ahead, n / other to exit.)\n"
-  )
+    print(f"\nHello {credentials['screen_name']}.")
+    print(
+        f"You have {len(tweet_ids)} tweets. Delete now? (enter y / yes to go ahead, n / other to exit.)\n"
+    )
 
-  answer = input()
+    answer = input()
 
-  if answer.lower() == "y" or answer.lower() == "yes":
-      pass
-  else:
-      sys.exit()
+    if answer.lower() == "y" or answer.lower() == "yes":
+        pass
+    else:
+        sys.exit()
 
-  print("\n\nDeleting now.")
+    print("\n\nDeleting now.")
 
-  for i in range(args.threads):
-      Process(
-          target=delete_tweets,
-          args=(
-              (
-                  workload[i],
-                  account_session,
-              )
-          ),
-      ).start()
+    for i in range(args.threads):
+        Process(
+            target=delete_tweets,
+            args=(
+                (
+                    workload[i],
+                    account_session,
+                )
+            ),
+        ).start()
 
-  Process(
-      target=delete_tweets,
-      args=(
-          (
-              tweet_ids[args.threads * workload_size :],
-              account_session,
-          )
-      ),
-  ).start()
+    Process(
+        target=delete_tweets,
+        args=(
+            (
+                tweet_ids[args.threads * workload_size :],
+                account_session,
+            )
+        ),
+    ).start()
