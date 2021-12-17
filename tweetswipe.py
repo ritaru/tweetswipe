@@ -1,12 +1,11 @@
 import os
 import gc
 import sys
-import argparse
 import json
 
-from requests_oauthlib import OAuth1Session, oauth1_session
+from requests_oauthlib import OAuth1Session
 from urllib.parse import parse_qsl
-from multiprocessing import Process
+from multiprocessing import Process, freeze_support
 
 
 def delete_tweets(tweets: list, oauth: OAuth1Session):
@@ -27,28 +26,9 @@ def delete_tweets(tweets: list, oauth: OAuth1Session):
 
 CLIENT_KEY = "CLIENT_KEY"
 CLIENT_SECRET = "CLIENT_SECRET"
+WORKER_COUNT = 32
 
-parser = argparse.ArgumentParser(description="Twitter archive eraser")
-
-parser.add_argument(
-    "--file",
-    type=str,
-    default="./tweet.js",
-    help="Input file. Look for the tweet.js file under the archive's data folder.",
-)
-parser.add_argument(
-    "--threads",
-    type=int,
-    default=32,
-    help="How many threads to run. 32 is default, max to 64.",
-)
-
-args = parser.parse_args()
-
-if args.threads > 64:
-    args.threads = 64
-
-archive = open(args.file, "rt", encoding="utf-8")
+archive = open("./tweet.js", "rt", encoding="utf-8")
 archive.seek(25)
 tweets = json.loads(archive.read())
 archive.close()
@@ -64,11 +44,11 @@ del tweets
 gc.collect()
 
 if __name__ == "__main__":
-
+    freeze_support()
     workload = []
-    workload_size = len(tweet_ids) // args.threads
+    workload_size = len(tweet_ids) // WORKER_COUNT
 
-    for i in range(args.threads):
+    for i in range(WORKER_COUNT):
         workload.append(tweet_ids[i * workload_size : (i + 1) * workload_size])
 
     token_request = OAuth1Session(
@@ -100,7 +80,7 @@ if __name__ == "__main__":
 
     print(f"\nHello {credentials['screen_name']}.")
     print(
-        f"You have {len(tweet_ids)} tweets. Delete now? (enter y / yes to go ahead, n / other to exit.)\n"
+        f"You have {len(tweet_ids)} tweets. Delete now? (enter y / yes to go ahead, n / other to exit.)"
     )
 
     answer = input()
@@ -110,9 +90,9 @@ if __name__ == "__main__":
     else:
         sys.exit()
 
-    print("\n\nDeleting now.")
+    print("\nDeleting now.")
 
-    for i in range(args.threads):
+    for i in range(WORKER_COUNT):
         Process(
             target=delete_tweets,
             args=(
@@ -127,7 +107,7 @@ if __name__ == "__main__":
         target=delete_tweets,
         args=(
             (
-                tweet_ids[args.threads * workload_size :],
+                tweet_ids[WORKER_COUNT * workload_size :],
                 account_session,
             )
         ),
