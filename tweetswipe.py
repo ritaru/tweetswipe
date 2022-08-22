@@ -75,6 +75,8 @@ if __name__ == "__main__":
         for i in range(len(tweets)):
             tweet_ids.append(tweets[i]["tweet"]["id_str"])
 
+    zipFile.close()
+
     del archive
     del tweets
 
