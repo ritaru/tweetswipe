@@ -1,4 +1,4 @@
-# Encoding: UTF-8
+# -*- coding: utf-8 -*-
 
 import os
 import gc
@@ -15,14 +15,14 @@ from urllib.parse import parse_qsl
 def delete_tweets(tweets: list, oauth: OAuth1Session):
     url = "https://api.twitter.com/1.1/statuses/destroy/"
 
-    for i in range(len(tweets)):
+    for tweet in tweets:
         try:
-            res = oauth.post(url + tweets[i] + ".json")
+            res = oauth.post(url + tweet + ".json")
 
             if res.status_code == 200:
-                print(f"ID: {tweets[i]} deleted")
+                print(f"ID: {tweet} deleted")
             else:
-                print(f"ID: {tweets[i]} | failed")
+                print(f"ID: {tweet} | failed")
 
         except IndexError:
             pass
@@ -32,11 +32,15 @@ def exit_procedure(error_msg):
     print(error_msg)
     print('To exit, please press enter.')
     input()
-    exit()
+    sys.exit()
 
 
 if __name__ == "__main__":
-    zipFile = sys.argv[1]
+    try:
+        zipFile = sys.argv[1]
+    except IndexError:
+        exit_procedure("Please drag & drop the zip file downloaded from Twitter.")
+
     targetFiles = []
     targetFileRegex = re.compile('tweet\..*js.*')
 
@@ -82,16 +86,6 @@ if __name__ == "__main__":
 
     gc.collect()
 
-    workload = []
-    workload_size = len(tweet_ids) // WORKER_COUNT
-    no_leftovers = False
-
-    if len(tweet_ids) % WORKER_COUNT == 0:
-        no_leftovers = True
-
-    for i in range(WORKER_COUNT):
-        workload.append(tweet_ids[i * workload_size : (i + 1) * workload_size])
-
     token_request = OAuth1Session(
         client_key=CLIENT_KEY, client_secret=CLIENT_SECRET, callback_uri="oob"
     )
@@ -120,6 +114,25 @@ if __name__ == "__main__":
     )
 
     print(f"\nHello {credentials['screen_name']}.")
+    print("How many workers do you want to use? Defaults to 32 workers. (Recommended)")
+    
+    try:
+        temp_val = int(input())
+    except ValueError:
+        temp_val = 32
+    
+    WORKER_COUNT = temp_val if temp_val > 0 else 32
+
+    workload = []
+    workload_size = len(tweet_ids) // WORKER_COUNT
+    no_leftovers = False
+
+    if len(tweet_ids) % WORKER_COUNT == 0:
+        no_leftovers = True
+
+    for i in range(WORKER_COUNT):
+        workload.append(tweet_ids[i * workload_size : (i + 1) * workload_size])
+
     print(
         f"You have {len(tweet_ids)} tweets. Delete now? (enter y / yes to go ahead, n / other to exit.)"
     )
