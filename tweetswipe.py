@@ -1,11 +1,15 @@
+# Encoding: UTF-8
+
 import os
 import gc
 import sys
 import json
+import re
+import zipfile
+import threading
 
 from requests_oauthlib import OAuth1Session
 from urllib.parse import parse_qsl
-from multiprocessing import Process, freeze_support
 
 
 def delete_tweets(tweets: list, oauth: OAuth1Session):
@@ -24,29 +28,64 @@ def delete_tweets(tweets: list, oauth: OAuth1Session):
             pass
 
 
-CLIENT_KEY = "CLIENT_KEY"
-CLIENT_SECRET = "CLIENT_SECRET"
-WORKER_COUNT = 32
+def exit_procedure(error_msg):
+    print(error_msg)
+    print('To exit, please press enter.')
+    input()
+    exit()
 
-archive = open("./tweet.js", "rt", encoding="utf-8")
-archive.seek(25)
-tweets = json.loads(archive.read())
-archive.close()
-
-tweet_ids = []
-
-for i in range(len(tweets)):
-    tweet_ids.append(tweets[i]["tweet"]["id_str"])
-
-del archive
-del tweets
-
-gc.collect()
 
 if __name__ == "__main__":
-    freeze_support()
+    zipFile = sys.argv[1]
+    targetFiles = []
+    targetFileRegex = re.compile('tweet\..*js.*')
+
+    if not zipfile.is_zipfile(zipFile):
+        exit_procedure('Provided file is probably not a zip file.')
+
+    try:
+        zipFile = zipfile.ZipFile(zipFile)
+    except FileExistsError:
+        exit_procedure('Zip file does not exist.')
+
+    try:
+        if not zipFile.getinfo('data/').is_dir():
+            raise RuntimeError('Provided zip file does not contain data/ folder.')
+    except (RuntimeError, KeyError):
+        exit_procedure('The zip file does not have path data/.')
+
+    zipPath = zipfile.Path(zipFile, 'data/')
+
+    for item in zipPath.iterdir():
+        if targetFileRegex.fullmatch(item.name):
+            targetFiles.append(item)
+
+    CLIENT_KEY = "CLIENT_KEY"
+    CLIENT_SECRET = "CLIENT_SECRET"
+    WORKER_COUNT = 32
+
+    tweet_ids = []
+
+    for file in targetFiles:   
+        archive = file.open(mode = 'r', encoding = 'utf-8')
+        archive.seek(re.compile('.*= ').search(archive.readline()).end())
+        tweets = json.loads(archive.read())
+        archive.close()
+
+        for i in range(len(tweets)):
+            tweet_ids.append(tweets[i]["tweet"]["id_str"])
+
+    del archive
+    del tweets
+
+    gc.collect()
+
     workload = []
     workload_size = len(tweet_ids) // WORKER_COUNT
+    no_leftovers = False
+
+    if len(tweet_ids) % WORKER_COUNT == 0:
+        no_leftovers = True
 
     for i in range(WORKER_COUNT):
         workload.append(tweet_ids[i * workload_size : (i + 1) * workload_size])
@@ -85,15 +124,15 @@ if __name__ == "__main__":
 
     answer = input()
 
-    if answer.lower() == "y" or answer.lower() == "yes":
-        pass
-    else:
+    if not (answer.lower() == "y" or answer.lower() == "yes"):
         sys.exit()
 
     print("\nDeleting now.")
 
+    threads = []
+
     for i in range(WORKER_COUNT):
-        Process(
+        threads.append(threading.Thread(
             target=delete_tweets,
             args=(
                 (
@@ -101,14 +140,23 @@ if __name__ == "__main__":
                     account_session,
                 )
             ),
-        ).start()
+            daemon=True
+        ))
 
-    Process(
-        target=delete_tweets,
-        args=(
-            (
-                tweet_ids[WORKER_COUNT * workload_size :],
-                account_session,
-            )
-        ),
-    ).start()
+    if (not no_leftovers):
+        threads.append(threading.Thread(
+            target=delete_tweets,
+            args=(
+                (
+                    tweet_ids[WORKER_COUNT * workload_size :],
+                    account_session,
+                )
+            ),
+            daemon=True
+        ))
+
+    for thread in threads:
+        thread.start()
+
+    for thread in threads:
+        thread.join()
