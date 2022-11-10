@@ -42,7 +42,7 @@ if __name__ == "__main__":
         exit_procedure("Please drag & drop the zip file downloaded from Twitter.")
 
     targetFiles = []
-    targetFileRegex = re.compile('tweets\..*js.*')
+    targetFileRegex = re.compile('tweet[s]?\..*js.*')
 
     if not zipfile.is_zipfile(zipFile):
         exit_procedure('Provided file is probably not a zip file.')
