@@ -7,6 +7,7 @@ import json
 import re
 import zipfile
 import threading
+import webbrowser
 
 from requests_oauthlib import OAuth1Session
 from urllib.parse import parse_qsl
@@ -92,9 +93,7 @@ if __name__ == "__main__":
     res = token_request.post("https://api.twitter.com/oauth/request_token")
     tokens = dict(parse_qsl(res.text))
 
-    os.system(
-        f"start \"\" https://api.twitter.com/oauth/authorize?oauth_token={tokens['oauth_token']}"
-    )
+    webbrowser.open(f"https://api.twitter.com/oauth/authorize?oauth_token={tokens['oauth_token']}")
 
     sys.stdout.write("Enter the PIN code: ")
     pin_code = str(input())
