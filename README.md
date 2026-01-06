@@ -8,7 +8,7 @@
 
 ## 사용법 (macOS)
 1. tweetswipe 실행 파일이 있는 경로를 터미널로 엽니다.
-2. ./tweetswipe.macos.arm64.bin <트윗 아카이브>.zip 을 쳐준 뒤 실행!
+2. ./tweetswipe.macos.arm64(혹은 x86_64).bin <트윗 아카이브>.zip 을 쳐준 뒤 실행!
 3. 트위터에 로그인 후 인증하여 지웁니다.
 
 ## License
