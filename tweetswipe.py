@@ -43,7 +43,7 @@ if __name__ == "__main__":
         exit_procedure("Please drag & drop the zip file downloaded from Twitter.")
 
     targetFiles = []
-    targetFileRegex = re.compile('tweet[s]?\..*js.*')
+    targetFileRegex = re.compile(r'tweet[s]?\..*js.*')
 
     if not zipfile.is_zipfile(zipFile):
         exit_procedure('Provided file is probably not a zip file.')
@@ -73,7 +73,7 @@ if __name__ == "__main__":
 
     for file in targetFiles:   
         archive = file.open(mode = 'r', encoding = 'utf-8')
-        archive.seek(re.compile('.*= ').search(archive.readline()).end())
+        archive.seek(re.compile(r'.*= ').search(archive.readline()).end())
         tweets = json.loads(archive.read())
         archive.close()
 
@@ -122,15 +122,20 @@ if __name__ == "__main__":
     
     WORKER_COUNT = temp_val if temp_val > 0 else 32
 
+    if not tweet_ids:
+        exit_procedure("No tweets were found inside the provided archive.")
+
     workload = []
-    workload_size = len(tweet_ids) // WORKER_COUNT
-    no_leftovers = False
+    worker_target = min(WORKER_COUNT, len(tweet_ids))
+    worker_target = max(1, worker_target)
+    base_chunk = len(tweet_ids) // worker_target
+    remainder = len(tweet_ids) % worker_target
+    start = 0
 
-    if len(tweet_ids) % WORKER_COUNT == 0:
-        no_leftovers = True
-
-    for i in range(WORKER_COUNT):
-        workload.append(tweet_ids[i * workload_size : (i + 1) * workload_size])
+    for worker_index in range(worker_target):
+        size = base_chunk + (1 if worker_index < remainder else 0)
+        workload.append(tweet_ids[start : start + size])
+        start += size
 
     print(
         f"You have {len(tweet_ids)} tweets. Delete now? (enter y / yes to go ahead, n / other to exit.)"
@@ -145,24 +150,12 @@ if __name__ == "__main__":
 
     threads = []
 
-    for i in range(WORKER_COUNT):
+    for chunk in workload:
         threads.append(threading.Thread(
             target=delete_tweets,
             args=(
                 (
-                    workload[i],
-                    account_session,
-                )
-            ),
-            daemon=True
-        ))
-
-    if (not no_leftovers):
-        threads.append(threading.Thread(
-            target=delete_tweets,
-            args=(
-                (
-                    tweet_ids[WORKER_COUNT * workload_size :],
+                    chunk,
                     account_session,
                 )
             ),
